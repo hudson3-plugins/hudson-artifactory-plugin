@@ -24,6 +24,7 @@ import hudson.model.Result;
 import hudson.remoting.Which;
 import hudson.scm.NullChangeLogParser;
 import hudson.scm.NullSCM;
+import hudson.tasks.Builder;
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.hudson.api.model.IBaseBuildableProject;
 import org.hudsonci.maven.model.config.BuildConfigurationDTO;
@@ -36,16 +37,13 @@ import org.jfrog.hudson.plugins.artifactory.action.ActionableHelper;
 import org.jfrog.hudson.plugins.artifactory.action.BuildInfoResultAction;
 import org.jfrog.hudson.plugins.artifactory.config.Credentials;
 import org.jfrog.hudson.plugins.artifactory.config.ServerDetails;
-import org.jfrog.hudson.plugins.artifactory.util.CredentialResolver;
-import org.jfrog.hudson.plugins.artifactory.util.ExtractorUtils;
-import org.jfrog.hudson.plugins.artifactory.util.PluginDependencyHelper;
-import org.jfrog.hudson.plugins.artifactory.util.PublisherContext;
-import org.jfrog.hudson.plugins.artifactory.util.ResolverContext;
+import org.jfrog.hudson.plugins.artifactory.util.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.URL;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -58,8 +56,8 @@ public class MavenExtractorEnvironment extends Environment {
     public static final String MAVEN_PLUGIN_OPTS = "-Dm3plugin.lib";
     public static final String CLASSWORLDS_CONF_KEY = "classworlds.conf";
 
-    private final String originalMavenOpts;
-    private final BuildConfigurationDTO mavenConfig;
+    private String originalMavenOpts;
+    private BuildConfigurationDTO mavenConfig;
     private FilePath classworldsConf;
     private String propertiesFilePath;
 
@@ -69,20 +67,26 @@ public class MavenExtractorEnvironment extends Environment {
     private AbstractBuild build;
     private Maven3ExtractorWrapper wrapper;
     private BuildListener buildListener;
+    private int buildStepCounter = 0;
+    private final List<? extends MavenBuilder> builders;
 
 
     public MavenExtractorEnvironment(AbstractBuild build, Maven3ExtractorWrapper wrapper, BuildListener buildListener)
-            throws IOException, InterruptedException {
-        this.build = build;
-        this.wrapper = wrapper;
+        throws IOException, InterruptedException
+    {
+        this.build         = build;
+        this.wrapper       = wrapper;
         this.buildListener = buildListener;
-        mavenConfig = ActionableHelper.getBuilders(
-                (IBaseBuildableProject) build.getProject(), MavenBuilder.class).get(0).getConfig();
-        this.originalMavenOpts = mavenConfig.getMavenOpts();
+        this.builders      = ActionableHelper.getBuilders(( IBaseBuildableProject ) build.getProject(), MavenBuilder.class );
     }
 
+    @SuppressWarnings({ "ValueOfIncrementOrDecrementUsed" , "SuppressionAnnotation" })
     @Override
-    public void buildEnvVars(Map<String, String> env) {
+    public void buildEnvVars( Map<String, String> env )
+    {
+        this.mavenConfig       = this.builders.get( buildStepCounter++ ).getConfig();
+        this.originalMavenOpts = mavenConfig.getMavenOpts();
+        boolean lastBuildStep  = ( buildStepCounter == this.builders.size());
 
         if (build.getWorkspace() == null) {
             // HAP-274 - workspace might not be initialized yet (this method will be called later in the build lifecycle)
@@ -131,31 +135,29 @@ public class MavenExtractorEnvironment extends Environment {
             }
         }
 
-        if (!initialized) {
-            try {
-                mavenConfig.setMavenOpts(appendNewMavenOpts());
+        try {
+            mavenConfig.setMavenOpts(appendNewMavenOpts());
 
-                PublisherContext publisherContext = null;
-                if (wrapper != null) {
-                    publisherContext = createPublisherContext(wrapper);
-                }
-
-                ResolverContext resolverContext = null;
-                if (wrapper != null && wrapper.isResolveArtifacts()) {
-                    Credentials resolverCredentials = CredentialResolver.getPreferredResolver(
-                            wrapper, wrapper.getResolverArtifactoryServer());
-                    resolverContext = new ResolverContext(wrapper.getResolverArtifactoryServer(),
-                            wrapper.getResolveDetails(), resolverCredentials);
-                }
-
-                ArtifactoryClientConfiguration configuration = ExtractorUtils.addBuilderInfoArguments(
-                        env, build, buildListener, publisherContext, resolverContext);
-                propertiesFilePath = configuration.getPropertiesFile();
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+            PublisherContext publisherContext = null;
+            if (wrapper != null) {
+                publisherContext = createPublisherContext(wrapper);
             }
-            initialized = true;
+
+            ResolverContext resolverContext = null;
+            if (wrapper != null && wrapper.isResolveArtifacts()) {
+                Credentials resolverCredentials = CredentialResolver.getPreferredResolver(
+                        wrapper, wrapper.getResolverArtifactoryServer());
+                resolverContext = new ResolverContext(wrapper.getResolverArtifactoryServer(),
+                        wrapper.getResolveDetails(), resolverCredentials);
+            }
+
+            ArtifactoryClientConfiguration configuration = ExtractorUtils.addBuilderInfoArguments(
+                    env, build, buildListener, publisherContext, resolverContext);
+            propertiesFilePath = configuration.getPropertiesFile();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
+        initialized = true;
 
         env.put(BuildInfoConfigProperties.PROP_PROPS_FILE, propertiesFilePath);
     }
