@@ -24,7 +24,6 @@ import hudson.model.Result;
 import hudson.remoting.Which;
 import hudson.scm.NullChangeLogParser;
 import hudson.scm.NullSCM;
-import hudson.tasks.Builder;
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.hudson.api.model.IBaseBuildableProject;
 import org.hudsonci.maven.model.config.BuildConfigurationDTO;
@@ -56,8 +55,6 @@ public class MavenExtractorEnvironment extends Environment {
     public static final String MAVEN_PLUGIN_OPTS = "-Dm3plugin.lib";
     public static final String CLASSWORLDS_CONF_KEY = "classworlds.conf";
 
-    private String originalMavenOpts;
-    private BuildConfigurationDTO mavenConfig;
     private FilePath classworldsConf;
     private String propertiesFilePath;
 
@@ -67,31 +64,34 @@ public class MavenExtractorEnvironment extends Environment {
     private AbstractBuild build;
     private Maven3ExtractorWrapper wrapper;
     private BuildListener buildListener;
-    private int buildStepCounter = 0;
+
+    private       int                          buildStepCounter = 0;
     private final List<? extends MavenBuilder> builders;
+    private final String[]                     originalMavenOpts;
 
 
     public MavenExtractorEnvironment(AbstractBuild build, Maven3ExtractorWrapper wrapper, BuildListener buildListener)
         throws IOException, InterruptedException
     {
-        this.build         = build;
-        this.wrapper       = wrapper;
-        this.buildListener = buildListener;
-        this.builders      = ActionableHelper.getBuilders(( IBaseBuildableProject ) build.getProject(), MavenBuilder.class );
+        this.build             = build;
+        this.wrapper           = wrapper;
+        this.buildListener     = buildListener;
+        this.builders          = ActionableHelper.getBuilders(( IBaseBuildableProject ) build.getProject(), MavenBuilder.class );
+        this.originalMavenOpts = new String[ builders.size() ];
     }
 
     @SuppressWarnings({ "ValueOfIncrementOrDecrementUsed" , "SuppressionAnnotation" })
     @Override
     public void buildEnvVars( Map<String, String> env )
     {
-        this.mavenConfig       = this.builders.get( buildStepCounter++ ).getConfig();
-        this.originalMavenOpts = mavenConfig.getMavenOpts();
-        boolean lastBuildStep  = ( buildStepCounter == this.builders.size());
-
         if (build.getWorkspace() == null) {
             // HAP-274 - workspace might not be initialized yet (this method will be called later in the build lifecycle)
             return;
         }
+
+        BuildConfigurationDTO mavenConfig     = builders.get( buildStepCounter ).getConfig();
+        originalMavenOpts[ buildStepCounter ] = mavenConfig.getMavenOpts();
+        boolean lastBuildStep                 = (( buildStepCounter++ ) == builders.size());
 
         //If an SCM is configured
         if (!initialized && !(build.getProject().getScm() instanceof NullSCM)) {
@@ -136,7 +136,7 @@ public class MavenExtractorEnvironment extends Environment {
         }
 
         try {
-            mavenConfig.setMavenOpts(appendNewMavenOpts());
+            mavenConfig.setMavenOpts( appendNewMavenOpts( mavenConfig.getMavenOpts()));
 
             PublisherContext publisherContext = null;
             if (wrapper != null) {
@@ -183,7 +183,12 @@ public class MavenExtractorEnvironment extends Environment {
 
     @Override
     public boolean tearDown(AbstractBuild build, BuildListener listener) throws IOException, InterruptedException {
-        mavenConfig.setMavenOpts(originalMavenOpts);
+
+        for ( int buildStep = 0; buildStep < builders.size(); buildStep++ )
+        {
+            builders.get( buildStep ).getConfig().setMavenOpts( originalMavenOpts[ buildStep ] );
+        }
+
         if (classworldsConf != null) {
             classworldsConf.delete();
         }
@@ -199,24 +204,24 @@ public class MavenExtractorEnvironment extends Environment {
      * Append custom Maven opts to the existing to the already existing ones. The opt that will be appended is the
      * location Of the plugin for the Maven process to use.
      */
-    public String appendNewMavenOpts()
-            throws IOException {
-        String opts = mavenConfig.getMavenOpts();
+    @SuppressWarnings({ "AssignmentToMethodParameter", "SuppressionAnnotation" })
+    public String appendNewMavenOpts( String originalOpts )
+        throws IOException {
 
-        if (StringUtils.contains(opts, MAVEN_PLUGIN_OPTS)) {
+        if (StringUtils.contains(originalOpts, MAVEN_PLUGIN_OPTS)) {
             buildListener.getLogger().println(
                     "Property '" + MAVEN_PLUGIN_OPTS +
                             "' is already part of MAVEN_OPTS. This is usually a leftover of " +
                             "previous build which was forcibly stopped. Replacing the value with an updated one. " +
                             "Please remove it from the job configuration.");
             // this regex will remove the property and the value (the value either ends with a space or surrounded by quotes
-            opts = opts.replaceAll(MAVEN_PLUGIN_OPTS + "=([^\\s\"]+)|" + MAVEN_PLUGIN_OPTS + "=\"([^\"]*)\"", "")
-                    .trim();
+            originalOpts = originalOpts.replaceAll(MAVEN_PLUGIN_OPTS + "=([^\\s\"]+)|" + MAVEN_PLUGIN_OPTS + "=\"([^\"]*)\"", "").
+                           trim();
         }
 
         StringBuilder mavenOpts = new StringBuilder();
-        if (StringUtils.isNotBlank(opts)) {
-            mavenOpts.append(opts);
+        if (StringUtils.isNotBlank(originalOpts)) {
+            mavenOpts.append(originalOpts);
         }
 
         File maven3ExtractorJar = Which.jarFile(BuildInfoRecorder.class);
