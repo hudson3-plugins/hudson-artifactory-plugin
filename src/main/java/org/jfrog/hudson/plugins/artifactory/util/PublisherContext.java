@@ -36,6 +36,7 @@ public class PublisherContext {
     private boolean runChecks;
     private boolean includePublishArtifacts;
     private String violationRecipients;
+    private String accumulateArtifacts;
     private String scopes;
     private boolean licenseAutoDiscovery;
     private boolean discardOldBuilds;
@@ -122,6 +123,10 @@ public class PublisherContext {
 
     public String getViolationRecipients() {
         return violationRecipients;
+    }
+
+    public String getAccumulateArtifacts () {
+        return accumulateArtifacts;
     }
 
     public boolean isLicenseAutoDiscovery() {
@@ -222,6 +227,11 @@ public class PublisherContext {
 
         public Builder violationRecipients(String violationRecipients) {
             publisher.violationRecipients = violationRecipients;
+            return this;
+        }
+
+        public Builder accumulateArtifacts (String accumulateArtifacts) {
+            publisher.accumulateArtifacts = accumulateArtifacts;
             return this;
         }
 
