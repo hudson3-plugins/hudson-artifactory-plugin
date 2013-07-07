@@ -68,9 +68,10 @@ public class MavenExtractorEnvironment extends Environment {
     private       int                          buildStepCounter = -1;
     private final List<? extends MavenBuilder> builders;
     private final String[]                     originalMavenOpts;
-    private final String[]                     accumulatePaths;
+    private final String                       accumulatePath;
 
 
+    @SuppressWarnings({ "AssignmentToNull" , "SuppressionAnnotation" })
     public MavenExtractorEnvironment(AbstractBuild build, Maven3ExtractorWrapper wrapper, BuildListener buildListener)
         throws IOException, InterruptedException
     {
@@ -79,7 +80,7 @@ public class MavenExtractorEnvironment extends Environment {
         this.buildListener     = buildListener;
         this.builders          = ActionableHelper.getBuilders(( IBaseBuildableProject ) build.getProject(), MavenBuilder.class );
         this.originalMavenOpts = new String[ builders.size() ];
-        this.accumulatePaths   = new String[ builders.size() ];
+        this.accumulatePath    = ( builders.size() > 1 ) ? accumulateDirectory().getRemote() : null;
     }
 
     @SuppressWarnings({ "ValueOfIncrementOrDecrementUsed" , "SuppressionAnnotation" })
@@ -143,7 +144,7 @@ public class MavenExtractorEnvironment extends Environment {
 
             PublisherContext publisherContext = null;
             if (wrapper != null) {
-                publisherContext = createPublisherContext(wrapper, isLastBuildStep);
+                publisherContext = createPublisherContext(wrapper, builders.size() > 1);
             }
 
             ResolverContext resolverContext = null;
@@ -155,7 +156,7 @@ public class MavenExtractorEnvironment extends Environment {
             }
 
             ArtifactoryClientConfiguration configuration =
-                ExtractorUtils.addBuilderInfoArguments( env, build, buildListener, publisherContext, resolverContext);
+                ExtractorUtils.addBuilderInfoArguments(env, build, buildListener, publisherContext, resolverContext);
             propertiesFilePath = configuration.getPropertiesFile();
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -190,8 +191,8 @@ public class MavenExtractorEnvironment extends Environment {
         for ( int buildStep = 0; buildStep < builders.size(); buildStep++ )
         {
             builders.get( buildStep ).getConfig().setMavenOpts( originalMavenOpts[ buildStep ] );
-            if ( accumulatePaths[ buildStep ] != null ){
-                new FilePath( new File( accumulatePaths[ buildStep ] )).deleteRecursive();
+            if ( accumulatePath != null ){
+                new FilePath( new File( accumulatePath )).deleteRecursive();
             }
         }
 
@@ -255,13 +256,9 @@ public class MavenExtractorEnvironment extends Environment {
         }
     }
 
-    @SuppressWarnings({ "AssignmentToNull", "SuppressionAnnotation" })
-    private PublisherContext createPublisherContext( Maven3ExtractorWrapper publisher,
-                                                     boolean                isLastBuildStep )
+    @SuppressWarnings({ "AssignmentToNull" , "SuppressionAnnotation" , "FeatureEnvy" })
+    private PublisherContext createPublisherContext(Maven3ExtractorWrapper publisher, boolean accumulateArtifacts)
     {
-        String accumulatePath               = isLastBuildStep ? null : buildStepTempDirectory().getRemote();
-        accumulatePaths[ buildStepCounter ] = accumulatePath;
-
         ServerDetails server = publisher.getDetails();
         return new PublisherContext.Builder().artifactoryServer(publisher.getArtifactoryServer())
                 .serverDetails(server).deployerOverrider(publisher).resolverOverrider(publisher)
@@ -283,16 +280,9 @@ public class MavenExtractorEnvironment extends Environment {
     }
 
 
-    private FilePath buildStepTempDirectory()
+    private FilePath accumulateDirectory ()
     {
-        try
-        {
-            return build.getWorkspace().createTempDir( "step-" + ( buildStepCounter + 1 ) + "-", "" );
-        }
-        catch ( Exception e )
-        {
-            throw new RuntimeException(e);
-        }
+        try { return build.getWorkspace().createTempDir( "accumulate-", "" );}
+        catch ( Exception e ){ throw new RuntimeException( "Failed to retrieve accumulate directory", e);}
     }
-
 }
