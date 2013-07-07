@@ -91,7 +91,7 @@ public class MavenExtractorEnvironment extends Environment {
 
         BuildConfigurationDTO mavenConfig     = builders.get( buildStepCounter ).getConfig();
         originalMavenOpts[ buildStepCounter ] = mavenConfig.getMavenOpts();
-        boolean lastBuildStep                 = (( buildStepCounter++ ) == builders.size());
+        boolean isLastBuildStep               = (( ++buildStepCounter ) == builders.size());
 
         //If an SCM is configured
         if (!initialized && !(build.getProject().getScm() instanceof NullSCM)) {
@@ -140,7 +140,7 @@ public class MavenExtractorEnvironment extends Environment {
 
             PublisherContext publisherContext = null;
             if (wrapper != null) {
-                publisherContext = createPublisherContext(wrapper);
+                publisherContext = createPublisherContext(wrapper, isLastBuildStep);
             }
 
             ResolverContext resolverContext = null;
@@ -151,8 +151,8 @@ public class MavenExtractorEnvironment extends Environment {
                         wrapper.getResolveDetails(), resolverCredentials);
             }
 
-            ArtifactoryClientConfiguration configuration = ExtractorUtils.addBuilderInfoArguments(
-                    env, build, buildListener, publisherContext, resolverContext);
+            ArtifactoryClientConfiguration configuration =
+                ExtractorUtils.addBuilderInfoArguments( env, build, buildListener, publisherContext, resolverContext);
             propertiesFilePath = configuration.getPropertiesFile();
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -249,7 +249,7 @@ public class MavenExtractorEnvironment extends Environment {
         }
     }
 
-    private PublisherContext createPublisherContext(Maven3ExtractorWrapper publisher) {
+    private PublisherContext createPublisherContext(Maven3ExtractorWrapper publisher, boolean publishBuildInfoAndArtifacts) {
         ServerDetails server = publisher.getDetails();
         return new PublisherContext.Builder().artifactoryServer(publisher.getArtifactoryServer())
                 .serverDetails(server).deployerOverrider(publisher).resolverOverrider(publisher)
@@ -257,10 +257,10 @@ public class MavenExtractorEnvironment extends Environment {
                 .includePublishArtifacts(publisher.isIncludePublishArtifacts())
                 .violationRecipients(publisher.getViolationRecipients()).scopes(publisher.getScopes())
                 .licenseAutoDiscovery(publisher.isLicenseAutoDiscovery())
-                .discardOldBuilds(publisher.isDiscardOldBuilds()).deployArtifacts(publisher.isDeployArtifacts())
+                .discardOldBuilds(publisher.isDiscardOldBuilds()).deployArtifacts( publisher.isDeployArtifacts() && publishBuildInfoAndArtifacts )
                 .resolveArtifacts(publisher.isResolveArtifacts())
                 .includesExcludes(publisher.getArtifactDeploymentPatterns())
-                .skipBuildInfoDeploy(!publisher.isDeployBuildInfo())
+                .skipBuildInfoDeploy( ! ( publisher.isDeployBuildInfo() && publishBuildInfoAndArtifacts ))
                 .includeEnvVars(publisher.isIncludeEnvVars()).envVarsPatterns(publisher.getEnvVarsPatterns())
                 .discardBuildArtifacts(publisher.isDiscardBuildArtifacts())
                 .matrixParams(publisher.getMatrixParams())
