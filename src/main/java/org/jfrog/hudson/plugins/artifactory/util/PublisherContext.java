@@ -35,8 +35,9 @@ public class PublisherContext {
     private ResolverOverrider resolverOverrider;
     private boolean runChecks;
     private boolean includePublishArtifacts;
+    private boolean publishAggregatedArtifacts;
     private String violationRecipients;
-    private String accumulateArtifacts;
+    private String aggregateArtifactsPath;
     private String scopes;
     private boolean licenseAutoDiscovery;
     private boolean discardOldBuilds;
@@ -125,8 +126,12 @@ public class PublisherContext {
         return violationRecipients;
     }
 
-    public String getAccumulateArtifacts () {
-        return accumulateArtifacts;
+    public boolean isPublishAggregatedArtifacts (){
+        return publishAggregatedArtifacts;
+    }
+
+    public String getAggregateArtifactsPath () {
+        return aggregateArtifactsPath;
     }
 
     public boolean isLicenseAutoDiscovery() {
@@ -230,8 +235,13 @@ public class PublisherContext {
             return this;
         }
 
-        public Builder accumulateArtifacts (String accumulateArtifacts) {
-            publisher.accumulateArtifacts = accumulateArtifacts;
+        public Builder aggregateArtifactsPath ( String aggregateArtifactsPath ) {
+            publisher.aggregateArtifactsPath = aggregateArtifactsPath;
+            return this;
+        }
+
+        public Builder publishAggregatedArtifacts ( boolean publishAggregatedArtifacts ) {
+            publisher.publishAggregatedArtifacts = publishAggregatedArtifacts;
             return this;
         }
 

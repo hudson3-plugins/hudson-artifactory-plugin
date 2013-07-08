@@ -24,9 +24,9 @@ import hudson.model.Result;
 import hudson.remoting.Which;
 import hudson.scm.NullChangeLogParser;
 import hudson.scm.NullSCM;
+import hudson.tasks.Builder;
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.hudson.api.model.IBaseBuildableProject;
-import org.hudsonci.maven.model.config.BuildConfigurationDTO;
 import org.hudsonci.maven.plugin.builder.MavenBuilder;
 import org.hudsonci.maven.plugin.builder.internal.MavenInstallationValidator;
 import org.jfrog.build.api.BuildInfoConfigProperties;
@@ -42,6 +42,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -66,24 +67,44 @@ public class MavenExtractorEnvironment extends Environment {
     private BuildListener buildListener;
 
     private       int                          buildStepCounter = -1;
-    private final List<? extends MavenBuilder> builders;
+    private final List<? extends Builder>      builders;
+    private final List<? extends MavenBuilder> mavenBuilders;
     private final String[]                     originalMavenOpts;
-    private final String                       accumulatePath;
+    private final String                       aggregateArtifactsPath;
 
 
     @SuppressWarnings({ "AssignmentToNull" , "SuppressionAnnotation" })
     public MavenExtractorEnvironment(AbstractBuild build, Maven3ExtractorWrapper wrapper, BuildListener buildListener)
         throws IOException, InterruptedException
     {
-        this.build             = build;
-        this.wrapper           = wrapper;
-        this.buildListener     = buildListener;
-        this.builders          = ActionableHelper.getBuilders(( IBaseBuildableProject ) build.getProject(), MavenBuilder.class );
-        this.originalMavenOpts = new String[ builders.size() ];
-        this.accumulatePath    = ( builders.size() > 1 ) ? accumulateDirectory().getRemote() : null;
+        this.build                  = build;
+        this.wrapper                = wrapper;
+        this.buildListener          = buildListener;
+        this.builders               = ActionableHelper.getBuilders(( IBaseBuildableProject ) build.getProject(), Builder.class );
+        this.mavenBuilders          = enabledMavenBuilders( builders );
+        this.originalMavenOpts      = new String[ builders.size() ];
+        this.aggregateArtifactsPath = ( mavenBuilders.size() > 1 ) ? aggregateDirectory().getRemote() : null;
     }
 
-    @SuppressWarnings({ "ValueOfIncrementOrDecrementUsed" , "SuppressionAnnotation" })
+
+    private List<MavenBuilder> enabledMavenBuilders ( List<? extends Builder> builders )
+    {
+        List<MavenBuilder> result = new ArrayList<MavenBuilder>( builders.size());
+
+        for ( Builder builder : builders ) {
+            if (( builder instanceof MavenBuilder ) && isEnabledMavenBuilder(( MavenBuilder ) builder )){
+                result.add(( MavenBuilder ) builder );
+            }
+        }
+
+        return result;
+    }
+
+    private boolean isEnabledMavenBuilder( MavenBuilder builder ) {
+        return ( ! builder.getConfig().getMavenOpts().contains( "-Dartifactory.plugin.skip" ));
+    }
+
+
     @Override
     public void buildEnvVars( Map<String, String> env )
     {
@@ -93,9 +114,17 @@ public class MavenExtractorEnvironment extends Environment {
         }
 
         buildStepCounter++; // Starts with zero and goes 0, 1, 2, ..
-        BuildConfigurationDTO mavenConfig     = builders.get( buildStepCounter ).getConfig();
-        originalMavenOpts[ buildStepCounter ] = mavenConfig.getMavenOpts();
-        boolean isLastBuildStep               = (( buildStepCounter + 1 ) == builders.size());
+
+        Builder builder = builders.get( buildStepCounter );
+
+        if ( ! (( builder instanceof MavenBuilder ) && isEnabledMavenBuilder(( MavenBuilder ) builder ))){
+            return;
+        }
+
+        final MavenBuilder mavenBuilder       = ( MavenBuilder ) builder;
+        final String       mavenOpts          = mavenBuilder.getConfig().getMavenOpts();
+        originalMavenOpts[ buildStepCounter ] = mavenOpts;
+        boolean isLastEnabledMavenBuilder     = ( builder == mavenBuilders.get( mavenBuilders.size() - 1 ));
 
         //If an SCM is configured
         if (!initialized && !(build.getProject().getScm() instanceof NullSCM)) {
@@ -140,11 +169,11 @@ public class MavenExtractorEnvironment extends Environment {
         }
 
         try {
-            mavenConfig.setMavenOpts( appendNewMavenOpts( mavenConfig.getMavenOpts()));
+            mavenBuilder.getConfig().setMavenOpts( appendNewMavenOpts( mavenOpts ));
 
             PublisherContext publisherContext = null;
             if (wrapper != null) {
-                publisherContext = createPublisherContext(wrapper, isLastBuildStep);
+                publisherContext = createPublisherContext(wrapper, isLastEnabledMavenBuilder);
             }
 
             ResolverContext resolverContext = null;
@@ -188,11 +217,15 @@ public class MavenExtractorEnvironment extends Environment {
     @Override
     public boolean tearDown(AbstractBuild build, BuildListener listener) throws IOException, InterruptedException {
 
-        for ( int buildStep = 0; buildStep < builders.size(); buildStep++ )
+        if ( aggregateArtifactsPath != null ){
+            new FilePath( new File( aggregateArtifactsPath )).deleteRecursive();
+        }
+
+        for ( int buildStepNumber = 0; buildStepNumber < builders.size(); buildStepNumber++ )
         {
-            builders.get( buildStep ).getConfig().setMavenOpts( originalMavenOpts[ buildStep ] );
-            if ( accumulatePath != null ){
-                new FilePath( new File( accumulatePath )).deleteRecursive();
+            final Builder builder = builders.get( buildStepNumber );
+            if (( builder instanceof MavenBuilder ) && isEnabledMavenBuilder(( MavenBuilder ) builder )) {
+                (( MavenBuilder ) builder ).getConfig().setMavenOpts( originalMavenOpts[ buildStepNumber ] );
             }
         }
 
@@ -257,20 +290,21 @@ public class MavenExtractorEnvironment extends Environment {
     }
 
     @SuppressWarnings({ "AssignmentToNull" , "SuppressionAnnotation" , "FeatureEnvy" })
-    private PublisherContext createPublisherContext(Maven3ExtractorWrapper publisher, boolean publishArtifacts)
+    private PublisherContext createPublisherContext(Maven3ExtractorWrapper publisher, boolean publishAggregatedArtifacts)
     {
         ServerDetails server = publisher.getDetails();
         return new PublisherContext.Builder().artifactoryServer(publisher.getArtifactoryServer())
                 .serverDetails(server).deployerOverrider(publisher).resolverOverrider(publisher)
                 .runChecks(publisher.isRunChecks())
                 .includePublishArtifacts(publisher.isIncludePublishArtifacts())
-                .accumulateArtifacts(accumulatePath)
+                .aggregateArtifactsPath( aggregateArtifactsPath )
+                .publishAggregatedArtifacts( publishAggregatedArtifacts )
                 .violationRecipients(publisher.getViolationRecipients()).scopes(publisher.getScopes())
                 .licenseAutoDiscovery(publisher.isLicenseAutoDiscovery())
-                .discardOldBuilds(publisher.isDiscardOldBuilds()).deployArtifacts(publisher.isDeployArtifacts() && publishArtifacts)
+                .discardOldBuilds(publisher.isDiscardOldBuilds()).deployArtifacts(publisher.isDeployArtifacts())
                 .resolveArtifacts(publisher.isResolveArtifacts())
                 .includesExcludes(publisher.getArtifactDeploymentPatterns())
-                .skipBuildInfoDeploy( ! ( publisher.isDeployBuildInfo() && publishArtifacts ))
+                .skipBuildInfoDeploy(!publisher.isDeployBuildInfo() )
                 .includeEnvVars(publisher.isIncludeEnvVars()).envVarsPatterns(publisher.getEnvVarsPatterns())
                 .discardBuildArtifacts(publisher.isDiscardBuildArtifacts())
                 .matrixParams(publisher.getMatrixParams())
@@ -280,9 +314,9 @@ public class MavenExtractorEnvironment extends Environment {
     }
 
 
-    private FilePath accumulateDirectory ()
+    private FilePath aggregateDirectory ()
     {
-        try { return build.getWorkspace().createTempDir( "accumulate-", "" );}
-        catch ( Exception e ){ throw new RuntimeException( "Failed to retrieve accumulate directory", e);}
+        try { return build.getWorkspace().createTempDir( "aggregate-", "" );}
+        catch ( Exception e ){ throw new RuntimeException( "Failed to retrieve aggregate directory", e);}
     }
 }

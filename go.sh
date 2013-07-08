@@ -2,7 +2,7 @@
 
 set -x
 
-mvn -e -B clean install -s ~/Projects/maven-plugins/settings.xml
+mvn -e -B clean package -s ~/Projects/maven-plugins/settings.xml
 rm -rf ~/.hudson/plugins/artifactory/ ~/.hudson/plugins/artifactory.hpi
 rm -rf ~/java/tomcat/temp
 mkdir  ~/java/tomcat/temp
