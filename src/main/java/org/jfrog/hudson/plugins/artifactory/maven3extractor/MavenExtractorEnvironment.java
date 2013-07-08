@@ -144,7 +144,7 @@ public class MavenExtractorEnvironment extends Environment {
 
             PublisherContext publisherContext = null;
             if (wrapper != null) {
-                publisherContext = createPublisherContext(wrapper, builders.size() > 1);
+                publisherContext = createPublisherContext(wrapper, isLastBuildStep);
             }
 
             ResolverContext resolverContext = null;
@@ -257,7 +257,7 @@ public class MavenExtractorEnvironment extends Environment {
     }
 
     @SuppressWarnings({ "AssignmentToNull" , "SuppressionAnnotation" , "FeatureEnvy" })
-    private PublisherContext createPublisherContext(Maven3ExtractorWrapper publisher, boolean accumulateArtifacts)
+    private PublisherContext createPublisherContext(Maven3ExtractorWrapper publisher, boolean publishArtifacts)
     {
         ServerDetails server = publisher.getDetails();
         return new PublisherContext.Builder().artifactoryServer(publisher.getArtifactoryServer())
@@ -267,10 +267,10 @@ public class MavenExtractorEnvironment extends Environment {
                 .accumulateArtifacts(accumulatePath)
                 .violationRecipients(publisher.getViolationRecipients()).scopes(publisher.getScopes())
                 .licenseAutoDiscovery(publisher.isLicenseAutoDiscovery())
-                .discardOldBuilds(publisher.isDiscardOldBuilds()).deployArtifacts(publisher.isDeployArtifacts())
+                .discardOldBuilds(publisher.isDiscardOldBuilds()).deployArtifacts(publisher.isDeployArtifacts() && publishArtifacts)
                 .resolveArtifacts(publisher.isResolveArtifacts())
                 .includesExcludes(publisher.getArtifactDeploymentPatterns())
-                .skipBuildInfoDeploy( ! publisher.isDeployBuildInfo())
+                .skipBuildInfoDeploy( ! ( publisher.isDeployBuildInfo() && publishArtifacts ))
                 .includeEnvVars(publisher.isIncludeEnvVars()).envVarsPatterns(publisher.getEnvVarsPatterns())
                 .discardBuildArtifacts(publisher.isDiscardBuildArtifacts())
                 .matrixParams(publisher.getMatrixParams())
