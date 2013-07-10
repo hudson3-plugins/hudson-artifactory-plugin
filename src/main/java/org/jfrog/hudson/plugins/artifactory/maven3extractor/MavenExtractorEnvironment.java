@@ -99,8 +99,14 @@ public class MavenExtractorEnvironment extends Environment {
     }
 
     private boolean isEnabledMavenBuilder( Builder builder ) {
-        return (( builder instanceof MavenBuilder ) &&
-                ( ! (( MavenBuilder ) builder ).getConfig().getMavenOpts().contains( "-Dartifactory.plugin.skip" )));
+
+        if ( ! ( builder instanceof MavenBuilder )){ return false; }
+
+        MavenBuilder mavenBuilder = ( MavenBuilder ) builder;
+
+        return ( mavenBuilder.getConfig()                != null ) &&
+               ( mavenBuilder.getConfig().getMavenOpts() != null ) &&
+               ( ! ( mavenBuilder.getConfig().getMavenOpts().contains( "-Dartifactory.plugin.skip" )));
     }
 
 
@@ -116,9 +122,7 @@ public class MavenExtractorEnvironment extends Environment {
 
         Builder builder = builders.get( buildStepCounter );
 
-        if ( ! isEnabledMavenBuilder( builder )){
-            return;
-        }
+        if ( ! isEnabledMavenBuilder( builder )){ return; }
 
         final MavenBuilder mavenBuilder       = ( MavenBuilder ) builder;
         final String       mavenOpts          = mavenBuilder.getConfig().getMavenOpts();
