@@ -155,11 +155,11 @@
                                  title="Aggregate artifacts"
                                  help="/plugin/artifactory/help/FreeStyle/help-aggregateArtifacts.html"
                                  inline="true">
-                </f:optionalBlock>
-                <f:optionalBlock name="copyAggregatedArtifacts" checked="${h.defaultToTrue(instance.copyAggregatedArtifacts)}"
-                                 title="Copy aggregated artifacts"
-                                 help="/plugin/artifactory/help/FreeStyle/help-copyAggregatedArtifacts.html"
-                                 inline="true">
+                    <f:optionalBlock name="copyAggregatedArtifacts" checked="${h.defaultToTrue(instance.copyAggregatedArtifacts)}"
+                                     title="Copy aggregated artifacts"
+                                     help="/plugin/artifactory/help/FreeStyle/help-copyAggregatedArtifacts.html"
+                                     inline="true">
+                    </f:optionalBlock>
                 </f:optionalBlock>
                 <f:optionalBlock name="deployBuildInfo" checked="${h.defaultToTrue(instance.deployBuildInfo)}"
                                  title="Capture and publish build info"
