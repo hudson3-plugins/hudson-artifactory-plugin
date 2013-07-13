@@ -35,6 +35,7 @@ public class PublisherContext {
     private ResolverOverrider resolverOverrider;
     private boolean runChecks;
     private boolean includePublishArtifacts;
+    private boolean copyAggregatedArtifacts;
     private boolean publishAggregatedArtifacts;
     private String violationRecipients;
     private String aggregateArtifactsPath;
@@ -124,6 +125,10 @@ public class PublisherContext {
 
     public String getViolationRecipients() {
         return violationRecipients;
+    }
+
+    public boolean isCopyAggregatedArtifacts (){
+        return copyAggregatedArtifacts;
     }
 
     public boolean isPublishAggregatedArtifacts (){
@@ -237,6 +242,11 @@ public class PublisherContext {
 
         public Builder aggregateArtifactsPath ( String aggregateArtifactsPath ) {
             publisher.aggregateArtifactsPath = aggregateArtifactsPath;
+            return this;
+        }
+
+        public Builder copyAggregatedArtifacts ( boolean copyAggregatedArtifacts ) {
+            publisher.copyAggregatedArtifacts = copyAggregatedArtifacts;
             return this;
         }
 

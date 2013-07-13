@@ -83,7 +83,9 @@ public class MavenExtractorEnvironment extends Environment {
         this.builders               = ActionableHelper.getBuilders(( IBaseBuildableProject ) build.getProject(), Builder.class );
         this.mavenBuilders          = enabledMavenBuilders( builders );
         this.originalMavenOpts      = new String[ builders.size() ];
-        this.aggregateArtifactsPath = ( mavenBuilders.size() > 1 ) ? aggregateDirectory().getRemote() : null;
+        this.aggregateArtifactsPath = ( wrapper.isAggregateArtifacts()) && ( mavenBuilders.size() > 1 ) ?
+                                        aggregateDirectory().getRemote() :
+                                        null;
     }
 
 
@@ -301,6 +303,7 @@ public class MavenExtractorEnvironment extends Environment {
                 .runChecks(publisher.isRunChecks())
                 .includePublishArtifacts(publisher.isIncludePublishArtifacts())
                 .aggregateArtifactsPath( aggregateArtifactsPath )
+                .copyAggregatedArtifacts( publisher.isCopyAggregatedArtifacts())
                 .publishAggregatedArtifacts( publishAggregatedArtifacts )
                 .violationRecipients(publisher.getViolationRecipients()).scopes(publisher.getScopes())
                 .licenseAutoDiscovery(publisher.isLicenseAutoDiscovery())
