@@ -27,7 +27,7 @@ import hudson.tasks.BuildWrapperDescriptor;
 import hudson.util.FormValidation;
 import net.sf.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
-import org.jfrog.gradle.plugin.artifactory.extractor.BuildInfoTask;
+import org.jfrog.gradle.plugin.artifactory.task.BuildInfoBaseTask;
 import org.jfrog.hudson.plugins.artifactory.ArtifactoryBuilder;
 import org.jfrog.hudson.plugins.artifactory.BuildInfoAwareConfigurator;
 import org.jfrog.hudson.plugins.artifactory.DeployerOverrider;
@@ -302,8 +302,8 @@ public class ArtifactoryGradleConfigurator extends BuildWrapper implements Deplo
             }
             originalTasks = gradleBuild.getTasks() + "";
             final String tasks = gradleBuild.getTasks() + "";
-            if (!StringUtils.contains(tasks, BuildInfoTask.BUILD_INFO_TASK_NAME)) {
-                setTargetsField(gradleBuild, "tasks", tasks + " " + BuildInfoTask.BUILD_INFO_TASK_NAME);
+            if (!StringUtils.contains(tasks, BuildInfoBaseTask.BUILD_INFO_TASK_NAME)) {
+                setTargetsField(gradleBuild, "tasks", tasks + " " + BuildInfoBaseTask.BUILD_INFO_TASK_NAME);
             }
         } else {
             listener.getLogger().println("[Warning] No Gradle build configured");
@@ -444,7 +444,7 @@ public class ArtifactoryGradleConfigurator extends BuildWrapper implements Deplo
         }
 
         /**
-         * Returns the list of {@link org.jfrog.hudson.ArtifactoryServer} configured.
+         * Returns the list of {@link org.jfrog.hudson.plugins.artifactory.config.ArtifactoryServer} configured.
          *
          * @return can be empty but never null.
          */
