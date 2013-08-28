@@ -24,9 +24,9 @@ import hudson.model.Result;
 import hudson.remoting.Which;
 import hudson.scm.NullChangeLogParser;
 import hudson.scm.NullSCM;
+import hudson.tasks.Builder;
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.hudson.api.model.IBaseBuildableProject;
-import org.hudsonci.maven.model.config.BuildConfigurationDTO;
 import org.hudsonci.maven.plugin.builder.MavenBuilder;
 import org.hudsonci.maven.plugin.builder.internal.MavenInstallationValidator;
 import org.jfrog.build.api.BuildInfoConfigProperties;
@@ -36,16 +36,14 @@ import org.jfrog.hudson.plugins.artifactory.action.ActionableHelper;
 import org.jfrog.hudson.plugins.artifactory.action.BuildInfoResultAction;
 import org.jfrog.hudson.plugins.artifactory.config.Credentials;
 import org.jfrog.hudson.plugins.artifactory.config.ServerDetails;
-import org.jfrog.hudson.plugins.artifactory.util.CredentialResolver;
-import org.jfrog.hudson.plugins.artifactory.util.ExtractorUtils;
-import org.jfrog.hudson.plugins.artifactory.util.PluginDependencyHelper;
-import org.jfrog.hudson.plugins.artifactory.util.PublisherContext;
-import org.jfrog.hudson.plugins.artifactory.util.ResolverContext;
+import org.jfrog.hudson.plugins.artifactory.util.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -58,8 +56,6 @@ public class MavenExtractorEnvironment extends Environment {
     public static final String MAVEN_PLUGIN_OPTS = "-Dm3plugin.lib";
     public static final String CLASSWORLDS_CONF_KEY = "classworlds.conf";
 
-    private final String originalMavenOpts;
-    private final BuildConfigurationDTO mavenConfig;
     private FilePath classworldsConf;
     private String propertiesFilePath;
 
@@ -70,24 +66,70 @@ public class MavenExtractorEnvironment extends Environment {
     private Maven3ExtractorWrapper wrapper;
     private BuildListener buildListener;
 
+    private       int                          buildStepCounter = -1;
+    private final List<? extends Builder>      builders;
+    private final List<? extends MavenBuilder> mavenBuilders;
+    private final String[]                     originalMavenOpts;
+    private final String                       aggregateArtifactsPath;
 
+
+    @SuppressWarnings({ "AssignmentToNull" , "SuppressionAnnotation" })
     public MavenExtractorEnvironment(AbstractBuild build, Maven3ExtractorWrapper wrapper, BuildListener buildListener)
-            throws IOException, InterruptedException {
-        this.build = build;
-        this.wrapper = wrapper;
-        this.buildListener = buildListener;
-        mavenConfig = ActionableHelper.getBuilders(
-                (IBaseBuildableProject) build.getProject(), MavenBuilder.class).get(0).getConfig();
-        this.originalMavenOpts = mavenConfig.getMavenOpts();
+        throws IOException, InterruptedException
+    {
+        this.build                  = build;
+        this.wrapper                = wrapper;
+        this.buildListener          = buildListener;
+        this.builders               = ActionableHelper.getBuilders(( IBaseBuildableProject ) build.getProject(), Builder.class );
+        this.mavenBuilders          = enabledMavenBuilders( builders );
+        this.originalMavenOpts      = new String[ builders.size() ];
+        this.aggregateArtifactsPath = ( wrapper.isAggregateArtifacts()) && ( mavenBuilders.size() > 1 ) ?
+                                        aggregateDirectory().getRemote() :
+                                        null;
     }
 
-    @Override
-    public void buildEnvVars(Map<String, String> env) {
 
+    private List<MavenBuilder> enabledMavenBuilders ( List<? extends Builder> builders )
+    {
+        List<MavenBuilder> result = new ArrayList<MavenBuilder>( builders.size());
+
+        for ( Builder builder : builders ) {
+            if ( isEnabledMavenBuilder( builder )){ result.add(( MavenBuilder ) builder ); }
+        }
+
+        return result;
+    }
+
+    private boolean isEnabledMavenBuilder( Builder builder ) {
+
+        if ( ! ( builder instanceof MavenBuilder )){ return false; }
+
+        MavenBuilder mavenBuilder = ( MavenBuilder ) builder;
+
+        return ( mavenBuilder.getConfig()                == null ) ||
+               ( mavenBuilder.getConfig().getMavenOpts() == null ) ||
+               ( ! ( mavenBuilder.getConfig().getMavenOpts().contains( "-Dartifactory.plugin.skip" )));
+    }
+
+
+    @Override
+    public void buildEnvVars( Map<String, String> env )
+    {
         if (build.getWorkspace() == null) {
             // HAP-274 - workspace might not be initialized yet (this method will be called later in the build lifecycle)
             return;
         }
+
+        buildStepCounter++; // Starts with zero and goes 0, 1, 2, ..
+
+        Builder builder = builders.get( buildStepCounter );
+
+        if ( ! isEnabledMavenBuilder( builder )){ return; }
+
+        final MavenBuilder mavenBuilder       = ( MavenBuilder ) builder;
+        final String       mavenOpts          = mavenBuilder.getConfig().getMavenOpts();
+        originalMavenOpts[ buildStepCounter ] = mavenOpts;
+        boolean isLastEnabledMavenBuilder     = ( builder == mavenBuilders.get( mavenBuilders.size() - 1 ));
 
         //If an SCM is configured
         if (!initialized && !(build.getProject().getScm() instanceof NullSCM)) {
@@ -131,31 +173,29 @@ public class MavenExtractorEnvironment extends Environment {
             }
         }
 
-        if (!initialized) {
-            try {
-                mavenConfig.setMavenOpts(appendNewMavenOpts());
+        try {
+            mavenBuilder.getConfig().setMavenOpts( appendNewMavenOpts( mavenOpts ));
 
-                PublisherContext publisherContext = null;
-                if (wrapper != null) {
-                    publisherContext = createPublisherContext(wrapper);
-                }
-
-                ResolverContext resolverContext = null;
-                if (wrapper != null && wrapper.isResolveArtifacts()) {
-                    Credentials resolverCredentials = CredentialResolver.getPreferredResolver(
-                            wrapper, wrapper.getResolverArtifactoryServer());
-                    resolverContext = new ResolverContext(wrapper.getResolverArtifactoryServer(),
-                            wrapper.getResolveDetails(), resolverCredentials);
-                }
-
-                ArtifactoryClientConfiguration configuration = ExtractorUtils.addBuilderInfoArguments(
-                        env, build, buildListener, publisherContext, resolverContext);
-                propertiesFilePath = configuration.getPropertiesFile();
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+            PublisherContext publisherContext = null;
+            if (wrapper != null) {
+                publisherContext = createPublisherContext(wrapper, isLastEnabledMavenBuilder);
             }
-            initialized = true;
+
+            ResolverContext resolverContext = null;
+            if (wrapper != null && wrapper.isResolveArtifacts()) {
+                Credentials resolverCredentials = CredentialResolver.getPreferredResolver(
+                        wrapper, wrapper.getResolverArtifactoryServer());
+                resolverContext = new ResolverContext(wrapper.getResolverArtifactoryServer(),
+                        wrapper.getResolveDetails(), resolverCredentials);
+            }
+
+            ArtifactoryClientConfiguration configuration =
+                ExtractorUtils.addBuilderInfoArguments(env, build, buildListener, publisherContext, resolverContext);
+            propertiesFilePath = configuration.getPropertiesFile();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
+        initialized = true;
 
         env.put(BuildInfoConfigProperties.PROP_PROPS_FILE, propertiesFilePath);
     }
@@ -181,7 +221,19 @@ public class MavenExtractorEnvironment extends Environment {
 
     @Override
     public boolean tearDown(AbstractBuild build, BuildListener listener) throws IOException, InterruptedException {
-        mavenConfig.setMavenOpts(originalMavenOpts);
+
+        if ( aggregateArtifactsPath != null ){
+            new FilePath( new File( aggregateArtifactsPath )).deleteRecursive();
+        }
+
+        for ( int buildStepNumber = 0; buildStepNumber < builders.size(); buildStepNumber++ )
+        {
+            final Builder builder = builders.get( buildStepNumber );
+            if ( isEnabledMavenBuilder( builder )) {
+                (( MavenBuilder ) builder ).getConfig().setMavenOpts( originalMavenOpts[ buildStepNumber ] );
+            }
+        }
+
         if (classworldsConf != null) {
             classworldsConf.delete();
         }
@@ -197,24 +249,24 @@ public class MavenExtractorEnvironment extends Environment {
      * Append custom Maven opts to the existing to the already existing ones. The opt that will be appended is the
      * location Of the plugin for the Maven process to use.
      */
-    public String appendNewMavenOpts()
-            throws IOException {
-        String opts = mavenConfig.getMavenOpts();
+    @SuppressWarnings({ "AssignmentToMethodParameter", "SuppressionAnnotation" })
+    public String appendNewMavenOpts( String originalOpts )
+        throws IOException {
 
-        if (StringUtils.contains(opts, MAVEN_PLUGIN_OPTS)) {
+        if (StringUtils.contains(originalOpts, MAVEN_PLUGIN_OPTS)) {
             buildListener.getLogger().println(
                     "Property '" + MAVEN_PLUGIN_OPTS +
                             "' is already part of MAVEN_OPTS. This is usually a leftover of " +
                             "previous build which was forcibly stopped. Replacing the value with an updated one. " +
                             "Please remove it from the job configuration.");
             // this regex will remove the property and the value (the value either ends with a space or surrounded by quotes
-            opts = opts.replaceAll(MAVEN_PLUGIN_OPTS + "=([^\\s\"]+)|" + MAVEN_PLUGIN_OPTS + "=\"([^\"]*)\"", "")
-                    .trim();
+            originalOpts = originalOpts.replaceAll(MAVEN_PLUGIN_OPTS + "=([^\\s\"]+)|" + MAVEN_PLUGIN_OPTS + "=\"([^\"]*)\"", "").
+                           trim();
         }
 
         StringBuilder mavenOpts = new StringBuilder();
-        if (StringUtils.isNotBlank(opts)) {
-            mavenOpts.append(opts);
+        if (StringUtils.isNotBlank(originalOpts)) {
+            mavenOpts.append(originalOpts);
         }
 
         File maven3ExtractorJar = Which.jarFile(BuildInfoRecorder.class);
@@ -242,18 +294,23 @@ public class MavenExtractorEnvironment extends Environment {
         }
     }
 
-    private PublisherContext createPublisherContext(Maven3ExtractorWrapper publisher) {
+    @SuppressWarnings({ "AssignmentToNull" , "SuppressionAnnotation" , "FeatureEnvy" })
+    private PublisherContext createPublisherContext(Maven3ExtractorWrapper publisher, boolean publishAggregatedArtifacts)
+    {
         ServerDetails server = publisher.getDetails();
         return new PublisherContext.Builder().artifactoryServer(publisher.getArtifactoryServer())
                 .serverDetails(server).deployerOverrider(publisher).resolverOverrider(publisher)
                 .runChecks(publisher.isRunChecks())
                 .includePublishArtifacts(publisher.isIncludePublishArtifacts())
+                .aggregateArtifactsPath( aggregateArtifactsPath )
+                .copyAggregatedArtifacts( publisher.isCopyAggregatedArtifacts())
+                .publishAggregatedArtifacts( publishAggregatedArtifacts )
                 .violationRecipients(publisher.getViolationRecipients()).scopes(publisher.getScopes())
                 .licenseAutoDiscovery(publisher.isLicenseAutoDiscovery())
                 .discardOldBuilds(publisher.isDiscardOldBuilds()).deployArtifacts(publisher.isDeployArtifacts())
                 .resolveArtifacts(publisher.isResolveArtifacts())
                 .includesExcludes(publisher.getArtifactDeploymentPatterns())
-                .skipBuildInfoDeploy(!publisher.isDeployBuildInfo())
+                .skipBuildInfoDeploy(!publisher.isDeployBuildInfo() )
                 .includeEnvVars(publisher.isIncludeEnvVars()).envVarsPatterns(publisher.getEnvVarsPatterns())
                 .discardBuildArtifacts(publisher.isDiscardBuildArtifacts())
                 .matrixParams(publisher.getMatrixParams())
@@ -262,4 +319,10 @@ public class MavenExtractorEnvironment extends Environment {
                 .aggregationBuildStatus(publisher.getAggregationBuildStatus()).build();
     }
 
+
+    private FilePath aggregateDirectory ()
+    {
+        try { return build.getWorkspace().createTempDir( "aggregate-", "" );}
+        catch ( Exception e ){ throw new RuntimeException( "Failed to retrieve aggregate directory", e);}
+    }
 }

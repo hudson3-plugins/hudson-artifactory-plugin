@@ -76,6 +76,8 @@ public class Maven3ExtractorWrapper extends BuildWrapper
      */
     private final boolean includeEnvVars;
 
+    private final boolean aggregateArtifacts;
+    private final boolean copyAggregatedArtifacts;
     private final boolean deployBuildInfo;
     private IncludesExcludes envVarsPatterns;
     private final boolean runChecks;
@@ -101,7 +103,7 @@ public class Maven3ExtractorWrapper extends BuildWrapper
     public Maven3ExtractorWrapper(ServerDetails details, ServerDetails resolveDetails,
             Credentials overridingDeployerCredentials,
             Credentials overridingResolverCredentials, IncludesExcludes artifactDeploymentPatterns,
-            boolean deployArtifacts, boolean deployBuildInfo,
+            boolean deployArtifacts, boolean aggregateArtifacts, boolean copyAggregatedArtifacts, boolean deployBuildInfo,
             boolean includeEnvVars, IncludesExcludes envVarsPatterns,
             boolean runChecks, String violationRecipients, boolean includePublishArtifacts,
             String scopes, boolean disableLicenseAutoDiscovery, boolean discardOldBuilds,
@@ -126,6 +128,8 @@ public class Maven3ExtractorWrapper extends BuildWrapper
         this.aggregationBuildStatus = aggregationBuildStatus;
         this.resolveArtifacts = resolveArtifacts;
         this.licenseAutoDiscovery = !disableLicenseAutoDiscovery;
+        this.aggregateArtifacts = aggregateArtifacts;
+        this.copyAggregatedArtifacts = copyAggregatedArtifacts;
         this.deployBuildInfo = deployBuildInfo;
         this.deployArtifacts = deployArtifacts;
         this.includeEnvVars = includeEnvVars;
@@ -183,6 +187,14 @@ public class Maven3ExtractorWrapper extends BuildWrapper
 
     public boolean isDeployBuildInfo() {
         return deployBuildInfo;
+    }
+
+    public boolean isAggregateArtifacts () {
+        return aggregateArtifacts;
+    }
+
+    public boolean isCopyAggregatedArtifacts (){
+        return copyAggregatedArtifacts;
     }
 
     public ArtifactoryServer getArtifactoryServer() {

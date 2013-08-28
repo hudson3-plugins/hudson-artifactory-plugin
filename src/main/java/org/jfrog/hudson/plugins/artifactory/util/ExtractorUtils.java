@@ -203,6 +203,11 @@ public class ExtractorUtils {
         configuration.info.licenseControl.setRunChecks(publisherContext.isRunChecks());
         configuration.info.licenseControl.setIncludePublishedArtifacts(publisherContext.isIncludePublishArtifacts());
         configuration.info.licenseControl.setAutoDiscover(publisherContext.isLicenseAutoDiscovery());
+        configuration.publisher.setCopyAggregatedArtifacts( publisherContext.isCopyAggregatedArtifacts());
+        configuration.publisher.setPublishAggregatedArtifacts( publisherContext.isPublishAggregatedArtifacts());
+        if (StringUtils.isNotBlank(publisherContext.getAggregateArtifactsPath())) {
+            configuration.publisher.setAggregateArtifacts( publisherContext.getAggregateArtifactsPath());
+        }
         if (publisherContext.isRunChecks()) {
             if (StringUtils.isNotBlank(publisherContext.getViolationRecipients())) {
                 configuration.info.licenseControl.setViolationRecipients(publisherContext.getViolationRecipients());
