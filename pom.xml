@@ -214,4 +214,45 @@
         </dependency>
 
     </dependencies>
+    <profiles>
+        <profile>
+            <id>oss</id>
+            <repositories>
+                <repository>
+                    <id>jfrog-libs-releases</id>
+                    <name>The jfrog repository for 3rd party releases</name>
+                    <url>https://oss.jfrog.org/libs-release</url>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                </repository>
+                <repository>
+                    <id>jfrog-libs-snapshots</id>
+                    <name>The jfrog repository for 3rd party snapshots</name>
+                    <url>https://oss.jfrog.org/libs-snapshot</url>
+                    <releases>
+                        <enabled>false</enabled>
+                    </releases>
+                </repository>
+            </repositories>
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>jfrog-plugins-releases</id>
+                    <name>The jfrog repository for plugin releases</name>
+                    <url>https://oss.jfrog.org/plugins-release</url>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                </pluginRepository>
+                <pluginRepository>
+                    <id>jfrog-plugins-snapshots</id>
+                    <name>The jfrog repository for plugin snapshots</name>
+                    <url>https://oss.jfrog.org/plugins-snapshot</url>
+                    <releases>
+                        <enabled>false</enabled>
+                    </releases>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+    </profiles>
 </project>
