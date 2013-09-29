@@ -232,6 +232,7 @@ public class ArtifactoryServer implements Serializable {
                                                                              ProxyConfiguration proxyConfiguration, BuildListener listener) {
         ArtifactoryDependenciesClient client = new ArtifactoryDependenciesClient(url, userName, password,
                 new HudsonBuildInfoLog(listener));
+        client.setHttpRequestRetryHandler(new DefaultHttpRequestRetryHandler(3,true));
         client.setConnectionTimeout(timeout);
         if (!bypassProxy && proxyConfiguration != null) {
             client.setProxyConfiguration(proxyConfiguration.host, proxyConfiguration.port, proxyConfiguration.username,
