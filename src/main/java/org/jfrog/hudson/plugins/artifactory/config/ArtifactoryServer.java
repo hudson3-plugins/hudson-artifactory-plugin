@@ -21,6 +21,7 @@ import com.google.common.collect.Lists;
 import hudson.model.BuildListener;
 import hudson.model.Hudson;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.jfrog.build.api.util.NullLog;
 import org.jfrog.build.client.*;
 import org.jfrog.hudson.plugins.artifactory.UserPluginInfo;
@@ -199,6 +200,7 @@ public class ArtifactoryServer implements Serializable {
     public ArtifactoryBuildInfoClient createArtifactoryClient(String userName, String password,
                                                               ProxyConfiguration proxyConfiguration) {
         ArtifactoryBuildInfoClient client = new ArtifactoryBuildInfoClient(url, userName, password, new NullLog());
+        client.setHttpRequestRetryHandler(new DefaultHttpRequestRetryHandler(3,true));
         client.setConnectionTimeout(timeout);
         if (!bypassProxy && proxyConfiguration != null) {
             client.setProxyConfiguration(proxyConfiguration.host,
@@ -206,7 +208,6 @@ public class ArtifactoryServer implements Serializable {
                     proxyConfiguration.username,
                     proxyConfiguration.password);
         }
-
         return client;
     }
 
