@@ -244,6 +244,7 @@ public class ExtractorUtils {
                 configuration.publisher.setExcludePatterns(excludePatterns);
             }
         }
+        configuration.publisher.setFilterExcludedArtifactsFromBuild(publisherContext.isFilterExcludedArtifactsFromBuild());
         configuration.publisher.setPublishBuildInfo(!publisherContext.isSkipBuildInfoDeploy());
         configuration.setIncludeEnvVars(publisherContext.isIncludeEnvVars());
         IncludesExcludes envVarsPatterns = publisherContext.getEnvVarsPatterns();

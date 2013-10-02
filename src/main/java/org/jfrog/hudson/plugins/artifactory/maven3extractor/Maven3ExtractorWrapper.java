@@ -70,7 +70,7 @@ public class Maven3ExtractorWrapper extends BuildWrapper
      */
     private final boolean deployArtifacts;
     private final IncludesExcludes artifactDeploymentPatterns;
-
+    private final boolean filterExcludedArtifactsFromBuild;
     /**
      * Include environment variables in the generated build info
      */
@@ -109,7 +109,7 @@ public class Maven3ExtractorWrapper extends BuildWrapper
             String scopes, boolean disableLicenseAutoDiscovery, boolean discardOldBuilds,
             boolean discardBuildArtifacts, String matrixParams,
             boolean enableIssueTrackerIntegration, boolean aggregateBuildIssues, String aggregationBuildStatus,
-            boolean resolveArtifacts) {
+            boolean resolveArtifacts,boolean filterExcludedArtifactsFromBuild) {
         this.details = details;
         this.resolveDetails = resolveDetails;
         this.overridingDeployerCredentials = overridingDeployerCredentials;
@@ -133,6 +133,7 @@ public class Maven3ExtractorWrapper extends BuildWrapper
         this.deployBuildInfo = deployBuildInfo;
         this.deployArtifacts = deployArtifacts;
         this.includeEnvVars = includeEnvVars;
+        this.filterExcludedArtifactsFromBuild = filterExcludedArtifactsFromBuild;
     }
 
     // NOTE: The following getters are used by jelly. Do not remove them
@@ -286,6 +287,10 @@ public class Maven3ExtractorWrapper extends BuildWrapper
 
     public String getAggregationBuildStatus() {
         return aggregationBuildStatus;
+    }
+
+    public boolean isFilterExcludedArtifactsFromBuild() {
+        return filterExcludedArtifactsFromBuild;
     }
 
     public ArtifactoryServer getArtifactoryServer(String artifactoryServerName) {

@@ -59,6 +59,7 @@ public class PublisherContext {
     private boolean enableIssueTrackerIntegration;
     private boolean aggregateBuildIssues;
     private String aggregationBuildStatus;
+    private boolean filterExcludedArtifactsFromBuild;
 
     private PublisherContext() {
     }
@@ -189,6 +190,10 @@ public class PublisherContext {
 
     public String getAggregationBuildStatus() {
         return aggregationBuildStatus;
+    }
+
+    public boolean isFilterExcludedArtifactsFromBuild() {
+        return filterExcludedArtifactsFromBuild;
     }
 
     public static class Builder {
@@ -352,6 +357,11 @@ public class PublisherContext {
 
         public Builder aggregationBuildStatus(String aggregationBuildStatus) {
             publisher.aggregationBuildStatus = aggregationBuildStatus;
+            return this;
+        }
+
+        public Builder filterExcludedArtifactsFromBuild(boolean filterExcludedArtifactsFromBuild) {
+            publisher.filterExcludedArtifactsFromBuild = filterExcludedArtifactsFromBuild;
             return this;
         }
     }

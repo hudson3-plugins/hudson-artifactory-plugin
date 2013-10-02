@@ -310,6 +310,7 @@ public class MavenExtractorEnvironment extends Environment {
                 .discardOldBuilds(publisher.isDiscardOldBuilds()).deployArtifacts(publisher.isDeployArtifacts())
                 .resolveArtifacts(publisher.isResolveArtifacts())
                 .includesExcludes(publisher.getArtifactDeploymentPatterns())
+                .filterExcludedArtifactsFromBuild(publisher.isFilterExcludedArtifactsFromBuild())
                 .skipBuildInfoDeploy(!publisher.isDeployBuildInfo() )
                 .includeEnvVars(publisher.isIncludeEnvVars()).envVarsPatterns(publisher.getEnvVarsPatterns())
                 .discardBuildArtifacts(publisher.isDiscardBuildArtifacts())

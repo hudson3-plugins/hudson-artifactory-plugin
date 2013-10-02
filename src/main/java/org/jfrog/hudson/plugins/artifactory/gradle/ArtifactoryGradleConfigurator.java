@@ -62,6 +62,7 @@ import java.util.Map;
  */
 public class ArtifactoryGradleConfigurator extends BuildWrapper implements DeployerOverrider,
         BuildInfoAwareConfigurator {
+    private final boolean filterExcludedArtifactsFromBuild;
     private ServerDetails details;
     private boolean deployArtifacts;
     private final Credentials overridingDeployerCredentials;
@@ -99,7 +100,7 @@ public class ArtifactoryGradleConfigurator extends BuildWrapper implements Deplo
             String artifactPattern, boolean notM2Compatible, IncludesExcludes artifactDeploymentPatterns,
             boolean discardOldBuilds, boolean discardBuildArtifacts, String matrixParams, boolean skipInjectInitScript,
             boolean enableIssueTrackerIntegration, boolean aggregateBuildIssues, String aggregationBuildStatus,
-            boolean allowPromotionOfNonStagedBuilds) {
+            boolean allowPromotionOfNonStagedBuilds,boolean filterExcludedArtifactsFromBuild) {
         this.details = details;
         this.overridingDeployerCredentials = overridingDeployerCredentials;
         this.deployMaven = deployMaven;
@@ -127,6 +128,7 @@ public class ArtifactoryGradleConfigurator extends BuildWrapper implements Deplo
         this.skipInjectInitScript = skipInjectInitScript;
         this.licenseAutoDiscovery = !disableLicenseAutoDiscovery;
         this.allowPromotionOfNonStagedBuilds = allowPromotionOfNonStagedBuilds;
+        this.filterExcludedArtifactsFromBuild = filterExcludedArtifactsFromBuild;
     }
 
     public ServerDetails getDetails() {
@@ -257,6 +259,10 @@ public class ArtifactoryGradleConfigurator extends BuildWrapper implements Deplo
         return allowPromotionOfNonStagedBuilds;
     }
 
+    public boolean isFilterExcludedArtifactsFromBuild() {
+        return filterExcludedArtifactsFromBuild;
+    }
+
     private String cleanString(String artifactPattern) {
         return StringUtils.removeEnd(StringUtils.removeStart(artifactPattern, "\""), "\"");
     }
@@ -321,6 +327,7 @@ public class ArtifactoryGradleConfigurator extends BuildWrapper implements Deplo
                         .violationRecipients(getViolationRecipients()).scopes(getScopes())
                         .licenseAutoDiscovery(isLicenseAutoDiscovery()).discardOldBuilds(isDiscardOldBuilds())
                         .deployArtifacts(isDeployArtifacts()).includesExcludes(getArtifactDeploymentPatterns())
+                        .filterExcludedArtifactsFromBuild(isFilterExcludedArtifactsFromBuild())
                         .skipBuildInfoDeploy(!isDeployBuildInfo())
                         .includeEnvVars(isIncludeEnvVars()).envVarsPatterns(getEnvVarsPatterns())
                         .discardBuildArtifacts(isDiscardBuildArtifacts()).matrixParams(getMatrixParams())
