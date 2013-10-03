@@ -21,7 +21,6 @@ import com.google.common.collect.Lists;
 import hudson.model.BuildListener;
 import hudson.model.Hudson;
 import org.apache.commons.lang.StringUtils;
-import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.jfrog.build.api.util.NullLog;
 import org.jfrog.build.client.*;
 import org.jfrog.hudson.plugins.artifactory.UserPluginInfo;
