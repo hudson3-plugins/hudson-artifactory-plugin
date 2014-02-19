@@ -121,7 +121,9 @@ public class MavenExtractorEnvironment extends Environment {
         }
 
         buildStepCounter++; // Starts with zero and goes 0, 1, 2, ..
-
+	if(buildStepCounter >= builders.size()){
+		return;//not sure about side effects of this, but gets rid of a nasty index out of bounds with multiple build wrappers
+	}
         Builder builder = builders.get( buildStepCounter );
 
         if ( ! isEnabledMavenBuilder( builder )){ return; }
