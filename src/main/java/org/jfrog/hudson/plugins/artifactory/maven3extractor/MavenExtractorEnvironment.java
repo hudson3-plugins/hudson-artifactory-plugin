@@ -122,7 +122,7 @@ public class MavenExtractorEnvironment extends Environment {
 
         buildStepCounter++; // Starts with zero and goes 0, 1, 2, ..
 
-        if(builders.size() >= buildStepCounter){ return; }
+        if(builders.size() <= buildStepCounter){ return; }
 
         Builder builder = builders.get( buildStepCounter );
 
