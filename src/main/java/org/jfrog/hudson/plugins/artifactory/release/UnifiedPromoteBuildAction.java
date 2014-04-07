@@ -252,7 +252,7 @@ public class UnifiedPromoteBuildAction<C extends BuildInfoAwareConfigurator & De
             ArtifactoryPromoter promoter = new ArtifactoryPromoter(build, promotionPlugin, promotionConfig, artifactoryServer, deployer);
             try {
                 long started = System.currentTimeMillis();
-                listener.getLogger().println("Promoting build ....");
+                listener.getLogger().println("[JFROG] Promoting build ....");
 
                 promoter.handlePromotion(listener);
 

@@ -58,7 +58,7 @@ public class GenericBuildInfoDeployer extends AbstractBuildInfoDeployer {
 
     public void deploy() throws IOException {
         String url = configurator.getArtifactoryServer().getUrl() + "/api/build";
-        listener.getLogger().println("Deploying build info to: " + url);
+        listener.getLogger().println("[JFROG] Deploying build info to: " + url);
         client.sendBuildInfo(buildInfo);
     }
 

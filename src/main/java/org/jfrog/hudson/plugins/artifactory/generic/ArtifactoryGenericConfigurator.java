@@ -186,7 +186,7 @@ public class ArtifactoryGenericConfigurator extends BuildWrapper implements Depl
         }
         final ArtifactoryServer artifactoryServer = getArtifactoryServer();
         if (artifactoryServer == null) {
-            listener.getLogger().format("No Artifactory server configured for %s. " +
+            listener.getLogger().format("[JFROG] No Artifactory server configured for %s. " +
                     "Please check your configuration.", artifactoryServerName).println();
             build.setResult(Result.FAILURE);
             throw new IllegalArgumentException("No Artifactory server configured for " + artifactoryServerName);

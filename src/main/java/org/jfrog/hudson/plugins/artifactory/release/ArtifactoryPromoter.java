@@ -64,7 +64,7 @@ public class ArtifactoryPromoter {
         HttpResponse pluginPromotionResponse = client.executePromotionUserPlugin(
                 promotionPlugin.getPluginName(), buildName, buildNumber, promotionPlugin.getParamMap());
         if (checkSuccess(pluginPromotionResponse, false, false, listener)) {
-            listener.getLogger().println("Promotion completed successfully!");
+            listener.getLogger().println("[JFROG] Promotion completed successfully!");
         }
     }
 
@@ -79,16 +79,16 @@ public class ArtifactoryPromoter {
                 .copy(promotionConfig.isUseCopy())
                 .dryRun(true);
         listener.getLogger()
-                .println("Performing dry run promotion (no changes are made during dry run) ...");
+                .println("[JFROG] Performing dry run promotion (no changes are made during dry run) ...");
         String buildName = ExtractorUtils.sanitizeBuildName(build.getParent().getFullName());
         String buildNumber = build.getNumber() + "";
         HttpResponse dryResponse = client.stageBuild(buildName, buildNumber, promotionBuilder.build());
         if (checkSuccess(dryResponse, true, true, listener)) {
-            listener.getLogger().println("Dry run finished successfully.\nPerforming promotion ...");
+            listener.getLogger().println("[JFROG] Dry run finished successfully.\nPerforming promotion ...");
             HttpResponse wetResponse = client.stageBuild(buildName,
                     buildNumber, promotionBuilder.dryRun(false).build());
             if (checkSuccess(wetResponse, false, true, listener)) {
-                listener.getLogger().println("Promotion completed successfully!");
+                listener.getLogger().println("[JFROG] Promotion completed successfully!");
             }
         }
     }

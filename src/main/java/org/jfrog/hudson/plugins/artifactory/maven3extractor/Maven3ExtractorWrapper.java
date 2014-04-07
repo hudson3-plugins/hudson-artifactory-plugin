@@ -318,7 +318,7 @@ public class Maven3ExtractorWrapper extends BuildWrapper
         }
         final ArtifactoryServer artifactoryServer = getArtifactoryServer(artifactoryServerName);
         if (artifactoryServer == null) {
-            listener.getLogger().format("No Artifactory server configured for %s. " +
+            listener.getLogger().format("[JFROG] No Artifactory server configured for %s. " +
                     "Please check your configuration.", artifactoryServerName).println();
             build.setResult(Result.FAILURE);
             throw new IllegalArgumentException("No Artifactory server configured for " + artifactoryServerName);

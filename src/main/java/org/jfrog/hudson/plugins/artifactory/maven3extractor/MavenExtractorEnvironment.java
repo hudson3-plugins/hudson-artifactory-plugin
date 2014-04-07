@@ -84,8 +84,11 @@ public class MavenExtractorEnvironment extends Environment {
         this.mavenBuilders          = enabledMavenBuilders( builders );
         this.originalMavenOpts      = new String[ builders.size() ];
         this.aggregateArtifactsPath = ( wrapper.isAggregateArtifacts()) && ( mavenBuilders.size() > 1 ) ?
-                                        aggregateDirectory().getRemote() :
-                                        null;
+                                        aggregateDirectory().getRemote() : null;
+
+        buildListener.getLogger().println("[JFROG] Created an Artifactory Maven Extractor Environment with " + builders.size()
+                + " build steps and " + mavenBuilders.size()
+                + " Maven build steps and aggregated here: '" + aggregateArtifactsPath + "'");
     }
 
 
@@ -144,7 +147,7 @@ public class MavenExtractorEnvironment extends Environment {
                 //Null changelog parser is set when a checkout wasn't performed yet
                 checkoutWasPerformed = !(scmObject instanceof NullChangeLogParser);
             } catch (Exception e) {
-                buildListener.getLogger().println("[Warning] An error occurred while testing if the SCM checkout " +
+                buildListener.getLogger().println("[JFROG] [WARN] An error occurred while testing if the SCM checkout " +
                         "has already been performed: " + e.getMessage());
             }
             if (!checkoutWasPerformed) {
@@ -193,6 +196,9 @@ public class MavenExtractorEnvironment extends Environment {
 
             ArtifactoryClientConfiguration configuration =
                 ExtractorUtils.addBuilderInfoArguments(env, build, buildListener, publisherContext, resolverContext);
+            buildListener.getLogger().println("[JFROG] Set the environment for builder #" + buildStepCounter + " "
+                    + builder.hashCode() + " wrapper " + ((wrapper == null) ? "none" : wrapper.hashCode())
+                    + " is last " + isLastEnabledMavenBuilder);
             propertiesFilePath = configuration.getPropertiesFile();
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -257,7 +263,7 @@ public class MavenExtractorEnvironment extends Environment {
 
         if (StringUtils.contains(originalOpts, MAVEN_PLUGIN_OPTS)) {
             buildListener.getLogger().println(
-                    "Property '" + MAVEN_PLUGIN_OPTS +
+                    "[JFROG] Property '" + MAVEN_PLUGIN_OPTS +
                             "' is already part of MAVEN_OPTS. This is usually a leftover of " +
                             "previous build which was forcibly stopped. Replacing the value with an updated one. " +
                             "Please remove it from the job configuration.");
