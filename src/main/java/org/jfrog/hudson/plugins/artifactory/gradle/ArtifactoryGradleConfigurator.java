@@ -277,10 +277,10 @@ public class ArtifactoryGradleConfigurator extends BuildWrapper implements Deplo
             throws IOException, InterruptedException {
         ArtifactoryServer artifactoryServer = getArtifactoryServer();
         if (artifactoryServer == null) {
-            listener.getLogger().format("No Artifactory server configured for %s. " +
+            listener.getLogger().format("[JFROG] No Artifactory server configured for %s. " +
                     "Please check your configuration.", getArtifactoryUrl()).println();
             build.setResult(Result.FAILURE);
-            throw new IOException("No Artifactory server configured for " + getArtifactoryUrl() +
+            throw new IOException("[JFROG] No Artifactory server configured for " + getArtifactoryUrl() +
                     ". Please check your configuration.");
         }
         String switches = null;
@@ -297,7 +297,7 @@ public class ArtifactoryGradleConfigurator extends BuildWrapper implements Deplo
                             workspace.createTextTempFile("init-artifactory", "gradle", writer.generateInitScript(),
                                     false);
                 } catch (Exception e) {
-                    listener.getLogger().println("Error occurred while writing Gradle Init Script: " + e.getMessage());
+                    listener.getLogger().println("[JFROG] Error occurred while writing Gradle Init Script: " + e.getMessage());
                     build.setResult(Result.FAILURE);
                     return new Environment() {
                     };
@@ -312,7 +312,7 @@ public class ArtifactoryGradleConfigurator extends BuildWrapper implements Deplo
                 setTargetsField(gradleBuild, "tasks", tasks + " " + BuildInfoBaseTask.BUILD_INFO_TASK_NAME);
             }
         } else {
-            listener.getLogger().println("[Warning] No Gradle build configured");
+            listener.getLogger().println("[JFROG] [WARN] No Gradle build configured");
         }
         final String finalSwitches = switches;
         final String finalOriginalTasks = originalTasks;

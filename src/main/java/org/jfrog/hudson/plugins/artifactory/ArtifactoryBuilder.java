@@ -49,9 +49,9 @@ public class ArtifactoryBuilder extends Builder {
         // this is where you 'build' the project
         List<ArtifactoryServer> servers = getDescriptor().getArtifactoryServers();
         if (servers.isEmpty()) {
-            listener.getLogger().println("No Artifactory server configured");
+            listener.getLogger().println("[JFROG] No Artifactory server configured");
         } else {
-            listener.getLogger().println(servers.size() + " Artifactory servers configured");
+            listener.getLogger().println("[JFROG] " + servers.size() + " Artifactory servers configured");
         }
         return true;
     }

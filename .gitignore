@@ -4,3 +4,4 @@
 *.iws
 target/
 work/
+atlassian-ide-plugin.xml

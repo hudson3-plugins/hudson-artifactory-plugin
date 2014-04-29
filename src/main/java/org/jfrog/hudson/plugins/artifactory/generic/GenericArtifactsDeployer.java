@@ -178,7 +178,7 @@ public class GenericArtifactsDeployer {
                     deploymentPathBuilder.append("/");
                 }
                 deploymentPathBuilder.append(deployDetail.getArtifactPath());
-                listener.getLogger().println("Deploying artifact: " + deploymentPathBuilder.toString());
+                listener.getLogger().println("[JFROG] Deploying artifact: " + deploymentPathBuilder.toString());
                 client.deployArtifact(deployDetail);
             }
         }
@@ -192,10 +192,10 @@ public class GenericArtifactsDeployer {
                         targetPath);
                 if (publishingData != null) {
                     listener.getLogger().println(
-                            "For pattern: " + pattern + " " + publishingData.size() + " artifacts were found");
+                            "[JFROG] For pattern: " + pattern + " " + publishingData.size() + " artifacts were found");
                     result.putAll(publishingData);
                 } else {
-                    listener.getLogger().println("For pattern: " + pattern + " no artifacts were found");
+                    listener.getLogger().println("[JFROG] For pattern: " + pattern + " no artifacts were found");
                 }
             }
 
@@ -215,7 +215,7 @@ public class GenericArtifactsDeployer {
             try {
                 checksums = FileChecksumCalculator.calculateChecksums(artifactFile, SHA1, MD5);
             } catch (NoSuchAlgorithmException e) {
-                listener.getLogger().println("Could not find checksum algorithm for " + SHA1 + " or " + MD5);
+                listener.getLogger().println("[JFROG] Could not find checksum algorithm for " + SHA1 + " or " + MD5);
             }
             DeployDetails.Builder builder = new DeployDetails.Builder()
                     .file(artifactFile)

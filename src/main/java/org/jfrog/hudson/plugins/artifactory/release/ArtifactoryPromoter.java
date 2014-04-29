@@ -64,10 +64,10 @@ public class ArtifactoryPromoter {
         HttpResponse pluginPromotionResponse = client.executePromotionUserPlugin(
                 promotionPlugin.getPluginName(), buildName, buildNumber, promotionPlugin.getParamMap());
         if (checkSuccess(pluginPromotionResponse, false, false, listener)) {
-            listener.getLogger().println("Promotion completed successfully!");
+            listener.getLogger().println("[JFROG] Promotion completed successfully!");
             return true;
         } else {
-            listener.getLogger().println("Promotion failed!");
+            listener.getLogger().println("[JFROG] Promotion failed!");
             return false;
         }
     }
@@ -83,41 +83,21 @@ public class ArtifactoryPromoter {
                 .copy(promotionConfig.isUseCopy())
                 .dryRun(true);
         listener.getLogger()
-                .println("Performing dry run promotion (no changes are made during dry run) ...");
+                .println("[JFROG] Performing dry run promotion (no changes are made during dry run) ...");
         String buildName = ExtractorUtils.sanitizeBuildName(build.getParent().getFullName());
         String buildNumber = build.getNumber() + "";
-
-        // Try and dry promote
-        boolean drySuccess = false;
-        int sleep = 120;
-        int attempts = 10;
-        for (int i = 0; i < attempts && !drySuccess; i++) {
-            HttpResponse dryResponse = client.stageBuild(buildName, buildNumber, promotionBuilder.build());
-            if (checkSuccess(dryResponse, true, true, listener)) {
-                listener.getLogger().println("Dry run attempt " + i + " of " + attempts + " finished successfully.\nPerforming promotion ...");
-                drySuccess = true;
-            } else {
-                listener.getLogger().println("Dry run attempt " + i + " of " + attempts + " failed. Sleeping for " + sleep + " seconds.");
-                try {
-                    Thread.sleep(sleep * 1000);
-                } catch (InterruptedException e) {
-                    listener.getLogger().println(e);
-                }
+        HttpResponse dryResponse = client.stageBuild(buildName, buildNumber, promotionBuilder.build());
+        if (checkSuccess(dryResponse, true, true, listener)) {
+            listener.getLogger().println("[JFROG] Dry run finished successfully.\nPerforming promotion ...");
+            HttpResponse wetResponse = client.stageBuild(buildName,
+                    buildNumber, promotionBuilder.dryRun(false).build());
+            if (checkSuccess(wetResponse, false, true, listener)) {
+                listener.getLogger().println("[JFROG] Promotion completed successfully!");
+                return true;
             }
         }
-        if (!drySuccess) {
-            return false;
-        }
-
-        // Winning! Heeere we go.
-        HttpResponse wetResponse = client.stageBuild(buildName, buildNumber, promotionBuilder.dryRun(false).build());
-        if (checkSuccess(wetResponse, false, true, listener)) {
-            listener.getLogger().println("Promotion completed successfully!");
-            return true;
-        } else {
-            listener.getLogger().println("Promotion failed!");
-            return false;
-        }
+        listener.getLogger().println("[JFROG] Dry Promotion failed, canceling Promotion!");
+        return false;
     }
 
     /**
