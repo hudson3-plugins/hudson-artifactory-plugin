@@ -40,16 +40,16 @@ public class ArtifactoryPromoter {
         this.deployer = deployer;
     }
 
-    public void handlePromotion(TaskListener listener) throws IOException {
+    public boolean handlePromotion(TaskListener listener) throws IOException {
         ArtifactoryBuildInfoClient client = null;
         try {
             client = artifactoryServer.createArtifactoryClient(deployer.getUsername(), deployer.getPassword(),
                     artifactoryServer.createProxyConfiguration(Hudson.getInstance().proxy));
 
             if (promotionPlugin != null && !UserPluginInfo.NO_PLUGIN_KEY.equals(promotionPlugin.getPluginName())) {
-                handlePluginPromotion(listener, client);
+                return handlePluginPromotion(listener, client);
             } else {
-                handleStandardPromotion(listener, client);
+                return handleStandardPromotion(listener, client);
             }
         } finally {
             if (client != null) {
@@ -58,17 +58,21 @@ public class ArtifactoryPromoter {
         }
     }
 
-    private void handlePluginPromotion(TaskListener listener, ArtifactoryBuildInfoClient client) throws IOException {
+    private boolean handlePluginPromotion(TaskListener listener, ArtifactoryBuildInfoClient client) throws IOException {
         String buildName = ExtractorUtils.sanitizeBuildName(build.getParent().getFullName());
         String buildNumber = build.getNumber() + "";
         HttpResponse pluginPromotionResponse = client.executePromotionUserPlugin(
                 promotionPlugin.getPluginName(), buildName, buildNumber, promotionPlugin.getParamMap());
         if (checkSuccess(pluginPromotionResponse, false, false, listener)) {
             listener.getLogger().println("[JFROG] Promotion completed successfully!");
+        return true;
+        } else {
+        listener.getLogger().println("[JFROG] Promotion failed!");
+        return false;
         }
     }
 
-    private void handleStandardPromotion(TaskListener listener, ArtifactoryBuildInfoClient client) throws IOException {
+    private boolean handleStandardPromotion(TaskListener listener, ArtifactoryBuildInfoClient client) throws IOException {
         // do a dry run first
         PromotionBuilder promotionBuilder = new PromotionBuilder()
                 .status(promotionConfig.getTargetStatus())
@@ -89,8 +93,11 @@ public class ArtifactoryPromoter {
                     buildNumber, promotionBuilder.dryRun(false).build());
             if (checkSuccess(wetResponse, false, true, listener)) {
                 listener.getLogger().println("[JFROG] Promotion completed successfully!");
+            return true;
             }
         }
+        listener.getLogger().println("[JFROG] Dry Promotion failed, canceling Promotion!");
+        return false;
     }
 
     /**
