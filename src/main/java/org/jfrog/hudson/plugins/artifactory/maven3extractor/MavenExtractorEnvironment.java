@@ -110,8 +110,10 @@ public class MavenExtractorEnvironment extends Environment {
         MavenBuilder mavenBuilder = ( MavenBuilder ) builder;
 
         return ( mavenBuilder.getConfig()                == null ) ||
-               ( mavenBuilder.getConfig().getMavenOpts() == null ) ||
-               ( ! ( mavenBuilder.getConfig().getMavenOpts().contains( "-Dartifactory.plugin.skip" )));
+                ( mavenBuilder.getConfig().getMavenOpts() == null ) ||
+                ( ! (mavenBuilder.getConfig().getMavenOpts().contains( "-Dartifactory.plugin.skip" ) ||
+                        mavenBuilder.getConfig().getProperties().contains("artifactory.plugin.skip"))
+                );
     }
 
 
