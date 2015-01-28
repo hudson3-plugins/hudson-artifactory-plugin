@@ -205,7 +205,7 @@
                     <groupId>org.gradle</groupId>
                     <artifactId>gradle-core</artifactId>
                 </exclusion>
-                <exclusion>b
+                <exclusion>
                     <groupId>org.gradle</groupId>
                     <artifactId>gradle-plugins</artifactId>
                 </exclusion>
