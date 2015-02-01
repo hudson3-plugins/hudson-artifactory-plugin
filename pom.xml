@@ -65,11 +65,11 @@
     </licenses>
 
     <properties>
-        <buildinfo.version>2.3.3</buildinfo.version>
+        <buildinfo.version>2.3.0</buildinfo.version>
         <maven-release-plugin.version>2.2</maven-release-plugin.version>
-        <buildinfo.maven3.version>2.4.3</buildinfo.maven3.version>
-        <buildinfo.gradle.version>3.0.3</buildinfo.gradle.version>
-        <buildinfo.ivy.version>2.3.2</buildinfo.ivy.version>
+        <buildinfo.maven3.version>2.3.0</buildinfo.maven3.version>
+        <buildinfo.gradle.version>3.0.1</buildinfo.gradle.version>
+        <buildinfo.ivy.version>2.3.0</buildinfo.ivy.version>
     </properties>
 
     <build>
