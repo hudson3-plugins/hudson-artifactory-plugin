@@ -103,7 +103,8 @@ public class MavenExtractorEnvironment extends Environment {
         return result;
     }
 
-    private boolean isEnabledMavenBuilder( Builder builder ) {
+
+private boolean isEnabledMavenBuilder( Builder builder ) {
 
         if ( ! ( builder instanceof MavenBuilder )){ return false; }
 
@@ -111,7 +112,9 @@ public class MavenExtractorEnvironment extends Environment {
 
         return ( mavenBuilder.getConfig()                == null ) ||
                 ( mavenBuilder.getConfig().getMavenOpts() == null ) ||
-                ( ! ( mavenBuilder.getConfig().getMavenOpts().contains( "-Dartifactory.plugin.skip" )));
+                ( ! (mavenBuilder.getConfig().getMavenOpts().contains( "-Dartifactory.plugin.skip" ) ||
+                        mavenBuilder.getConfig().getProperties().contains("artifactory.plugin.skip"))
+                );
     }
 
 
